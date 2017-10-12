@@ -40,15 +40,14 @@ public final class FileUtils {
         File lock = new File(getExternalFolder(null), "test.lock");
         FileOutputStream outputStream = null;
 
+        FileLock fileLock = null;
         try {
             outputStream = new FileOutputStream(lock.getAbsolutePath());
-            FileLock fileLock = outputStream.getChannel().tryLock();
+            fileLock = outputStream.getChannel().tryLock();
+
             if (fileLock != null) {
                 Timber.d(">>> Locked now");
                 Thread.sleep(8000); // simulate the critical area access
-
-                fileLock.release();
-                Timber.d(">>> Lock released");
 
                 return true;
             }
@@ -56,7 +55,17 @@ public final class FileUtils {
 
         } catch (IOException | InterruptedException e) {
             e.printStackTrace();
+
         } finally {
+            if (fileLock != null) {
+                try {
+                    fileLock.release();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+            Timber.d(">>> Lock released");
+
             IOUtils.closeQuietly(outputStream);
         }
 
